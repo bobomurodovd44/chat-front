@@ -37,6 +37,7 @@ const Page = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedChatName, setSelectedChatName] = useState("");
   const router = useRouter();
+  const [isSubmit, setIsSubmit] = useState(false);
 
   const textRef = useRef<HTMLInputElement>(null);
   const newGroupRef = useRef<HTMLInputElement>(null);
@@ -135,21 +136,32 @@ const Page = () => {
   const AddGroup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (newGroupRef.current) {
-      const Addedgroup = await client.service("groups").create({
-        name: newGroupRef.current.value,
-      });
+    if (isSubmit) return; // agar allaqachon submit bo'layotgan bo'lsa, qaytadi
 
-      await client.service("members").create({
-        chatId: Addedgroup._id,
-        userId: user!._id,
-        role: "owner",
-      });
+    setIsSubmit(true); // submit boshlandi
 
-      newGroupRef.current.value = "";
-      alert("Guruh yaratildi");
+    try {
+      if (newGroupRef.current) {
+        const Addedgroup = await client.service("groups").create({
+          name: newGroupRef.current.value,
+        });
 
-      await loadGroups();
+        await client.service("members").create({
+          chatId: Addedgroup._id,
+          userId: user!._id,
+          role: "owner",
+        });
+
+        newGroupRef.current.value = "";
+        alert("Guruh yaratildi");
+
+        await loadGroups();
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik yuz berdi");
+    } finally {
+      setIsSubmit(false); // submit tugadi, kerak bo'lsa yana submit qilish mumkin
     }
   };
 
@@ -171,8 +183,13 @@ const Page = () => {
 
   const AddMember = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmit) return;
+    setIsSubmit(true);
 
-    if (!user || !selectedGroup) return;
+    if (!user || !selectedGroup) {
+      setIsSubmit(false);
+      return;
+    }
 
     try {
       // 1️⃣ Current user member info
@@ -196,7 +213,10 @@ const Page = () => {
 
       // 3️⃣ Kiritilgan emailni olish
       const email = memberEmailRef.current?.value?.trim();
-      if (!email) return alert("Email kiritilmagan");
+      if (!email) {
+        setIsSubmit(false);
+        return alert("Email kiritilmagan");
+      }
 
       // 4️⃣ Users service da tekshirish
       const userRes = await client.service("users").find({
@@ -234,72 +254,55 @@ const Page = () => {
     } catch (error) {
       console.error("Add member error:", error);
       alert("Xatolik yuz berdi, qayta urinib ko'ring");
+    } finally {
+      setIsSubmit(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const response = await client.service("members").find({
-      query: {
+
+    if (isSubmit) return;
+    setIsSubmit(true);
+
+    try {
+      // loading UI uchun state
+      setIsLoading(true);
+
+      const response = await client.service("members").find({
+        query: {
+          chatId: selectedGroup,
+          userId: user?._id,
+        },
+      });
+
+      const member = response.data[0];
+
+      if (!member) {
+        if (textRef.current) textRef.current.value = "";
+        alert("Siz bu guruhga a'zo emassiz");
+        return;
+      }
+
+      const newMessage = await client.service("messages").create({
         chatId: selectedGroup,
-        userId: user?._id,
-      },
-    });
+        senderId: member._id,
+        text: textRef.current?.value,
+      });
 
-    const AddGroup = async (e: React.FormEvent) => {
-      e.preventDefault();
+      setMessages((prev) => [...prev, newMessage]);
 
-      if (newGroupRef.current) {
-        const Addedgroup = await client.service("groups").create({
-          name: newGroupRef.current.value,
-        });
-
-        await client.service("members").create({
-          chatId: Addedgroup.group._id,
-          userId: user!._id,
-          role: "owner",
-        });
-
-        newGroupRef.current.value = "";
-
-        router.push("/chat-groups");
-      }
-    };
-
-    const member = response.data[0];
-
-    if (!member) {
-      if (textRef.current) {
-        textRef.current.value = "";
-      }
-      return alert("siz bu gurhga azo emassiz");
+      if (textRef.current) textRef.current.value = "";
+      if (messagesEndRef.current)
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error(error);
+      alert("Xatolik yuz berdi, qayta urinib ko‘ring");
+    } finally {
+      setIsSubmit(false);
+      setIsLoading(false);
     }
-
-    const newMessage = await client.service("messages").create({
-      chatId: selectedGroup,
-      senderId: member._id,
-      text: textRef.current?.value,
-    });
-
-    setMessages((prev) => [...prev, newMessage]);
-
-    if (textRef.current) {
-      textRef.current.value = "";
-    }
-    if (messagesEndRef.current)
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full h-screen flex ">
@@ -324,7 +327,7 @@ const Page = () => {
                       variant="ghost"
                       size={"lg"}
                       className="w-full justify-start"
-                      title="Add member"
+                      title="Add Group"
                     >
                       Guruh qo'shish
                     </Button>
