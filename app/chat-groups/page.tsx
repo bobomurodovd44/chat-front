@@ -27,6 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/shad-ui/dialog";
+import { setMaxListeners } from "events";
 
 const Page = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -34,6 +35,7 @@ const Page = () => {
   const [selectedGroup, setSelectedGroup] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [currentChatType, setCurrentChatType] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedChatName, setSelectedChatName] = useState("");
   const router = useRouter();
@@ -41,6 +43,7 @@ const Page = () => {
 
   const textRef = useRef<HTMLInputElement>(null);
   const newGroupRef = useRef<HTMLInputElement>(null);
+  const newChatRef = useRef<HTMLInputElement>(null);
 
   const memberEmailRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +69,17 @@ const Page = () => {
       console.error("Error loading groups:", error);
     }
   };
+
+  useEffect(() => {
+    const checkGroupType = async () => {
+      if (selectedGroup) {
+        const group = await client.service("groups").get(selectedGroup);
+        setCurrentChatType(group.type); // faqat "private" yoki "group" keladi
+      }
+    };
+
+    checkGroupType();
+  }, [selectedGroup]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -164,6 +178,91 @@ const Page = () => {
       setIsSubmit(false); // submit tugadi, kerak bo'lsa yana submit qilish mumkin
     }
   };
+
+  // start Add Chat
+  const AddChat = async () => {
+    try {
+      setIsSubmit(true);
+
+      // 1. Email bo‘yicha userni qidirish
+      if (newChatRef.current) {
+        const userRes = await client.service("users").find({
+          query: { email: newChatRef.current?.value },
+        });
+
+        if (!userRes.data.length) {
+          alert("Bunday foydalanuvchi topilmadi");
+          setIsSubmit(false);
+          return;
+        }
+
+        const chatUser = userRes.data[0];
+
+        // 2. O‘zi bilan chat yarata olmasligi uchun tekshirish
+        if (user?._id === chatUser._id) {
+          alert("Siz o‘zingiz bilan chat qilolmaysiz");
+          newChatRef.current.value = "";
+          setIsSubmit(false);
+          return;
+        }
+
+        // 3. Oldin mavjud private chatni tekshirish
+        const currentUserName = user?.fullName || user?.email;
+        const otherUserName = chatUser.fullName || chatUser.email;
+
+        const existingChat = await client.service("groups").find({
+          query: {
+            type: "private",
+            $limit: 1,
+            $or: [
+              { name: `${currentUserName} & ${otherUserName}` },
+              { name: `${otherUserName} & ${currentUserName}` },
+            ],
+          },
+        });
+
+        if (existingChat.data.length > 0) {
+          alert("Bu foydalanuvchi bilan allaqachon chat mavjud");
+          newChatRef.current.value = "";
+          setIsSubmit(false);
+          return;
+        }
+
+        // 4. Yangi chat nomini yasash
+        const chatName = `${currentUserName} & ${otherUserName}`;
+
+        // 5. Yangi private chat yaratish
+        const newChat = await client.service("groups").create({
+          type: "private",
+          name: chatName,
+        });
+
+        // 6. Qarshi taraf userni qo‘shish
+        await client.service("members").create({
+          chatId: newChat._id,
+          userId: chatUser._id,
+          role: "member",
+        });
+
+        // 7. Current userni ham qo‘shish
+        await client.service("members").create({
+          chatId: newChat._id,
+          userId: user!._id,
+          role: "owner",
+        });
+      }
+
+      // 8. Formani tozalash
+      newChatRef.current!.value = "";
+      setIsSubmit(false);
+    } catch (error) {
+      console.error("AddChat error:", error);
+      alert("Chat yaratishda xatolik yuz berdi");
+      setIsSubmit(false);
+    }
+  };
+
+  // end Add Chat
 
   useEffect(() => {
     const findChatName = async () => {
@@ -365,6 +464,54 @@ const Page = () => {
                   </DialogContent>
                 </Dialog>
               </DropdownMenuItem>
+              {/* start add Private Chat */}
+              <DropdownMenuItem asChild className="text-md  font-medium">
+                <Dialog>
+                  {/* Trigger - faqat dialogni ochadi */}
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size={"lg"}
+                      className="w-full justify-start"
+                      title="Add Group"
+                    >
+                      Chat qo'shish
+                    </Button>
+                  </DialogTrigger>
+
+                  {/* Dialog content ichida alohida form */}
+                  <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={AddChat}>
+                      <DialogHeader>
+                        <DialogTitle>Chat qo'shish</DialogTitle>
+                        <DialogDescription>
+                          Chat qo'shish uchun user emilini kiriting
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="grid gap-4 mb-3">
+                        <div className="grid gap-3">
+                          <Label htmlFor="user-email">User emaili</Label>
+                          <Input
+                            id="user-email"
+                            ref={newChatRef}
+                            name="userEmail"
+                            type="email"
+                          />
+                        </div>
+                      </div>
+
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">Chat qo'shish</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </DropdownMenuItem>
+              {/* end add Private Chat */}
               <DropdownMenuItem
                 className="text-md text-red-400 font-medium"
                 onClick={handleLogout}
@@ -420,7 +567,7 @@ const Page = () => {
                       }`}
                     >
                       {/* Foydalanuvchi avatar */}
-                      {!isOwnMessage && (
+                      {!isOwnMessage && currentChatType != "private" && (
                         <Avatar className="w-8 h-8 bg-gray-200">
                           <AvatarFallback>
                             {getInitials(msg.senderFullName)}
@@ -470,49 +617,51 @@ const Page = () => {
                 className="w-full border-none rounded-lg  outline-none text-lg font-medium py-2 px-4 bg-white"
               />
             </form>
-            <Dialog>
-              {/* Trigger - faqat dialogni ochadi */}
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  title="Add member"
-                  className="bg-gray-100 text-gray-500 hover:bg-blue-400 size-12 cursor-pointer hover:text-white rounded-full border-3 hover:border-blue-400 border-gray-500 "
-                >
-                  <Plus />
-                </Button>
-              </DialogTrigger>
+            {currentChatType != "private" && (
+              <Dialog>
+                {/* Trigger - faqat dialogni ochadi */}
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    title="Add member"
+                    className="bg-gray-100 text-gray-500 hover:bg-blue-400 size-12 cursor-pointer hover:text-white rounded-full border-3 hover:border-blue-400 border-gray-500 "
+                  >
+                    <Plus />
+                  </Button>
+                </DialogTrigger>
 
-              {/* Dialog content ichida alohida form */}
-              <DialogContent className="sm:max-w-[425px]">
-                <form onSubmit={AddMember}>
-                  <DialogHeader>
-                    <DialogTitle>Guruhga a'zo qo'shish</DialogTitle>
-                    <DialogDescription>
-                      Qo'shmoqchi bo'lgan user emailini kiriting
-                    </DialogDescription>
-                  </DialogHeader>
+                {/* Dialog content ichida alohida form */}
+                <DialogContent className="sm:max-w-[425px]">
+                  <form onSubmit={AddMember}>
+                    <DialogHeader>
+                      <DialogTitle>Guruhga a'zo qo'shish</DialogTitle>
+                      <DialogDescription>
+                        Qo'shmoqchi bo'lgan user emailini kiriting
+                      </DialogDescription>
+                    </DialogHeader>
 
-                  <div className="grid gap-4 mb-3">
-                    <div className="grid gap-3">
-                      <Label htmlFor="member-email">Email</Label>
-                      <Input
-                        id="member-email"
-                        ref={memberEmailRef}
-                        name="email"
-                        type="email"
-                      />
+                    <div className="grid gap-4 mb-3">
+                      <div className="grid gap-3">
+                        <Label htmlFor="member-email">Email</Label>
+                        <Input
+                          id="member-email"
+                          ref={memberEmailRef}
+                          name="email"
+                          type="email"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button type="submit">Guruhga qo'shish</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit">Guruhga qo'shish</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )}
       </div>
