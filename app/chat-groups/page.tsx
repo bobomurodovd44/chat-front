@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/shad-ui/avatar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
-import { LogOut, Menu, Plus } from "lucide-react";
+import { Ghost, LogOut, Menu, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -307,20 +307,83 @@ const Page = () => {
       <div className="w-64 border-r-2 shadow-lg p-1 hidden lg:flex lg:flex-col border-gray-300 overflow-y-auto h-screen">
         {/* Chap sidebar content */}
         <div className="flex items-center justify-between">
-          <button className="py-2 px-3 rounded-md flex items-center justify-between text-lg bg-gray-300 cursor:pointer hover:bg-gray-400 text-gray-600">
-            <Menu />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="text-neutral-500 shadow-sm font-medium m-1 cursor-pointer bg-gray-100 rounded-md px-2 py-1 ">
+              <Menu />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="ml-2 shadow-lg w-[240px] mt-2">
+              <DropdownMenuLabel className="text-md">
+                {user?.fullName ? user.fullName : user?.email}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="text-md  font-medium">
+                <Dialog>
+                  {/* Trigger - faqat dialogni ochadi */}
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size={"lg"}
+                      className="w-full justify-start"
+                      title="Add member"
+                    >
+                      Guruh qo'shish
+                    </Button>
+                  </DialogTrigger>
+
+                  {/* Dialog content ichida alohida form */}
+                  <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={AddGroup}>
+                      <DialogHeader>
+                        <DialogTitle>Guruh qo'shish</DialogTitle>
+                        <DialogDescription>
+                          Qo'shmoqchi bo'lgan guruh nomini kiriting
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="grid gap-4 mb-3">
+                        <div className="grid gap-3">
+                          <Label htmlFor="group-name">Guruh nomi</Label>
+                          <Input
+                            id="group-name"
+                            ref={newGroupRef}
+                            name="group"
+                            type="text"
+                          />
+                        </div>
+                      </div>
+
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">Guruh qo'shish</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-md text-red-400 font-medium"
+                onClick={handleLogout}
+              >
+                <LogOut /> Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <Separator className="my-1" />
         {groups.map((group) => (
-          <Button
+          <button
             key={group._id}
             onClick={() => setSelectedGroup(group._id)}
-            className={`w-full justify-start my-0.5 text-lg `}
-            variant={selectedGroup === group._id ? "outline" : "ghost"}
+            className={`w-full flex flex-col  cursor-pointer rounded-md text-left my-0.5 px-2 py-4 text-lg ${
+              selectedGroup === group._id
+                ? "bg-blue-400 text-white hover:bg-blue-300"
+                : "hover:bg-gray-200"
+            } `}
           >
-            {group.name}
-          </Button>
+            <p>{group.name}</p>
+          </button>
         ))}
       </div>
 
