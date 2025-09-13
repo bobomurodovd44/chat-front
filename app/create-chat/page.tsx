@@ -9,7 +9,7 @@ const page = () => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  const textRef = useRef<HTMLInputElement>(null);
+  const newGroupRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -43,32 +43,32 @@ const page = () => {
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const AddGroup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (textRef.current) {
-      const group = await client.service("groups").create({
-        name: textRef.current.value,
+    if (newGroupRef.current) {
+      const Addedgroup = await client.service("groups").create({
+        name: newGroupRef.current.value,
       });
 
       await client.service("members").create({
-        chatId: group._id,
+        chatId: Addedgroup.group._id,
         userId: user!._id,
         role: "owner",
       });
 
-      textRef.current.value = "";
+      newGroupRef.current.value = "";
 
       router.push("/chat-groups");
     }
   };
   return (
     <div className="flex h-screen w-full items-center justify-center">
-      <form onSubmit={handleSubmit} className="w-80 p-4">
+      <form onSubmit={AddGroup} className="w-80 p-4">
         <input
           type="text"
           required
-          ref={textRef}
+          ref={newGroupRef}
           className="w-full rounded-md border-2 border-gray-500 text-gray-600 text-lg py-1 px-3"
           placeholder="Guruh nomi ..."
         />

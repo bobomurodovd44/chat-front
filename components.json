@@ -6,7 +6,7 @@
   "tailwind": {
     "config": "",
     "css": "app/globals.css",
-    "baseColor": "neutral",
+    "baseColor": "zinc",
     "cssVariables": true,
     "prefix": ""
   },
@@ -14,7 +14,7 @@
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
-    "ui": "@/components/ui",
+    "ui": "@/components/shad-ui",
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
