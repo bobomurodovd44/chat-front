@@ -5,6 +5,7 @@ type User = {
   email: string;
   password?: string;
   fullName: string;
+  username: string;
 };
 
 type UserStore = {

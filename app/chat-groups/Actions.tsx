@@ -70,7 +70,7 @@ const Actions = () => {
       // 1. Email bo‘yicha userni qidirish
       if (newChatRef.current) {
         const userRes = await client.service("users").find({
-          query: { email: newChatRef.current?.value },
+          query: { username: newChatRef.current?.value },
         });
 
         if (!userRes.data.length) {
@@ -88,8 +88,8 @@ const Actions = () => {
         }
 
         // 3. Oldin mavjud private chatni tekshirish
-        const currentUserName = user?.fullName || user?.email;
-        const otherUserName = chatUser.fullName || chatUser.email;
+        const currentUserName = user?.username;
+        const otherUserName = chatUser.username;
 
         const existingChat = await client.service("groups").find({
           query: {
@@ -232,18 +232,18 @@ const Actions = () => {
                   <DialogHeader>
                     <DialogTitle>Chat qo'shish</DialogTitle>
                     <DialogDescription>
-                      Chat qo'shish uchun user emilini kiriting
+                      Chat qo'shish uchun username kiriting
                     </DialogDescription>
                   </DialogHeader>
 
                   <div className="grid gap-4 mb-3">
                     <div className="grid gap-3">
-                      <Label htmlFor="user-email">User emaili</Label>
+                      <Label htmlFor="user-email">Username</Label>
                       <Input
                         id="user-email"
                         ref={newChatRef}
                         name="userEmail"
-                        type="email"
+                        type="text"
                       />
                     </div>
                   </div>

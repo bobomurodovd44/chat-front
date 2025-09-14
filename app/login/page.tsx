@@ -122,6 +122,7 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
+
               {error && (
                 <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md border border-red-200">
                   {error}

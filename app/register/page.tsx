@@ -31,6 +31,14 @@ const registerSchema = z
       .string()
       .min(2, "Full name must be at least 2 characters long")
       .max(50, "Full name must be less than 50 characters"),
+    username: z
+      .string()
+      .min(3, "Username must be at least 3 characters long")
+      .max(30, "Username must be less than 30 characters")
+      .regex(
+        /^[a-z](?=.*[a-z])[a-z0-9_]*$/,
+        "Username must contain only lowercase letters,_ and numbers"
+      ),
     email: z.string().email("Please enter a valid email address"),
     password: z.string().min(6, "Password must be at least 6 characters long"),
     confirmPassword: z.string(),
@@ -51,6 +59,7 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       fullName: "",
+      username: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -65,6 +74,7 @@ export default function RegisterPage() {
       // Create user account
       await client.service("users").create({
         fullName: data.fullName,
+        username: data.username,
         email: data.email,
         password: data.password,
       });
@@ -112,6 +122,25 @@ export default function RegisterPage() {
                         {...field}
                         type="text"
                         placeholder="Enter your full name"
+                        disabled={isLoading}
+                        className="w-full"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder="Enter your username (lowercase only)"
                         disabled={isLoading}
                         className="w-full"
                       />

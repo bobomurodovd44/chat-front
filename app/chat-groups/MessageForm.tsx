@@ -27,7 +27,7 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
   const { selectedGroup } = useSelectedGroupStore();
   const { messages, setMessages, addMessage } = useMessageStore();
   const { user, setUser } = useUserStore();
-  const memberEmailRef = useRef<HTMLInputElement>(null);
+  const memberUsernameRef = useRef<HTMLInputElement>(null);
 
   const textRef = useRef<HTMLInputElement>(null);
 
@@ -38,7 +38,7 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
     try {
       const response = await client.service("members").find({
         query: {
-          chatId: selectedGroup,
+          chatId: selectedGroup?._id,
           userId: user?._id,
         },
       });
@@ -52,7 +52,7 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
       }
 
       const newMessage = await client.service("messages").create({
-        chatId: selectedGroup,
+        chatId: selectedGroup?._id,
         senderId: member._id,
         text: textRef.current?.value,
       });
@@ -97,14 +97,14 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
       }
 
       // 3️⃣ Kiritilgan emailni olish
-      const email = memberEmailRef.current?.value?.trim();
-      if (!email) {
-        return alert("Email kiritilmagan");
+      const username = memberUsernameRef.current?.value?.trim();
+      if (!username) {
+        return alert("Username kiritilmagan");
       }
 
       // 4️⃣ Users service da tekshirish
       const userRes = await client.service("users").find({
-        query: { email },
+        query: { username },
       });
 
       if (userRes.data.length === 0) {
@@ -134,13 +134,15 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
 
       alert("Foydalanuvchi muvaffaqiyatli qo'shildi");
 
-      if (memberEmailRef.current) memberEmailRef.current.value = "";
+      if (memberUsernameRef.current) memberUsernameRef.current.value = "";
     } catch (error) {
       console.error("Add member error:", error);
       alert("Xatolik yuz berdi, qayta urinib ko'ring");
     } finally {
     }
   };
+
+  if (!selectedGroup) return null;
 
   return (
     <div className="w-full lg:max-w-4/6 mx-auto items-center border-t-1 border-gray-200 p-3 flex gap-2">
@@ -178,12 +180,13 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
 
               <div className="grid gap-4 mb-3">
                 <div className="grid gap-3">
-                  <Label htmlFor="member-email">Email</Label>
+                  <Label htmlFor="member-username">Username</Label>
                   <Input
-                    id="member-email"
-                    ref={memberEmailRef}
-                    name="email"
-                    type="email"
+                    id="member-username"
+                    ref={memberUsernameRef}
+                    name="username"
+                    type="text"
+                    required
                   />
                 </div>
               </div>
