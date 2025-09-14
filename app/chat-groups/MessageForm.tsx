@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelectedGroupStore } from "../store/selectedGroupStore";
 import { useMessageStore } from "../store/messageStore";
 import client from "@/lib/feathers-client";
@@ -31,33 +31,37 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
 
   const textRef = useRef<HTMLInputElement>(null);
 
-  //   Add new message
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // multiple submitni oldini olish
+    if (!selectedGroup || !user) return;
 
+    const text = textRef.current?.value?.trim();
+    if (!text) return; // bo'sh message yuborilmasin
+
+    setIsSubmitting(true); // submit boshlandi
     try {
+      // Member tekshirish
       const response = await client.service("members").find({
-        query: {
-          chatId: selectedGroup?._id,
-          userId: user?._id,
-        },
+        query: { chatId: selectedGroup._id, userId: user._id },
       });
-
       const member = response.data[0];
-
       if (!member) {
         if (textRef.current) textRef.current.value = "";
         alert("Siz bu guruhga a'zo emassiz");
         return;
       }
 
+      // Message yaratish
       const newMessage = await client.service("messages").create({
-        chatId: selectedGroup?._id,
+        chatId: selectedGroup._id,
         senderId: member._id,
-        text: textRef.current?.value,
+        text,
       });
 
       addMessage(newMessage);
+
+      // Inputni tozalash va scroll qilish
       if (textRef.current) textRef.current.value = "";
       if (messagesEndRef?.current)
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -65,80 +69,66 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
       console.error(error);
       alert("Xatolik yuz berdi, qayta urinib ko‘ring");
     } finally {
+      setIsSubmitting(false); // submit tugadi
     }
   };
 
   //   Add new member
-  const AddMember = async (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // multiple submitni oldini olish
+    if (!user || !selectedGroup) return;
 
-    if (!user || !selectedGroup) {
-      return;
-    }
+    const username = memberUsernameRef.current?.value?.trim();
+    if (!username) return alert("Username kiritilmagan");
 
+    setIsSubmitting(true); // submit bosildi
     try {
       // 1️⃣ Current user member info
       const currentMemberRes = await client.service("members").find({
-        query: {
-          userId: user._id,
-          chatId: selectedGroup._id,
-        },
+        query: { userId: user._id, chatId: selectedGroup._id },
       });
-
       const currentMember = currentMemberRes.data[0];
+      if (!currentMember) return alert("Siz bu guruhga a'zo emassiz");
 
-      if (!currentMember) {
-        return alert("Siz bu guruhga a'zo emassiz");
-      }
-
-      // 2️⃣ Foydalanuvchi owner ekanligini tekshirish
+      // 2️⃣ Owner tekshirish
       if (currentMember.role !== "owner") {
         return alert("Faqat owner yangi member qo'sha oladi");
       }
 
-      // 3️⃣ Kiritilgan emailni olish
-      const username = memberUsernameRef.current?.value?.trim();
-      if (!username) {
-        return alert("Username kiritilmagan");
-      }
-
-      // 4️⃣ Users service da tekshirish
-      const userRes = await client.service("users").find({
-        query: { username },
-      });
-
-      if (userRes.data.length === 0) {
-        return alert("Bunday emailga ega foydalanuvchi topilmadi");
-      }
+      // 3️⃣ Users service da tekshirish
+      const userRes = await client
+        .service("users")
+        .find({ query: { username } });
+      if (!userRes.data.length) return alert("Bunday username topilmadi");
 
       const newUser = userRes.data[0];
 
-      // 5️⃣ Shu chatdagi member emasligini tekshirish
+      // 4️⃣ Shu chatdagi member emasligini tekshirish
       const memberRes = await client.service("members").find({
-        query: {
-          chatId: selectedGroup._id,
-          userId: newUser._id,
-        },
+        query: { chatId: selectedGroup._id, userId: newUser._id },
       });
-
-      if (memberRes.data.length > 0) {
+      if (memberRes.data.length > 0)
         return alert("Bu foydalanuvchi allaqachon a'zo");
-      }
 
-      // 6️⃣ Hammasi to'g'ri bo'lsa member qo'shish
+      // 5️⃣ Member qo'shish
       await client.service("members").create({
         chatId: selectedGroup._id,
         userId: newUser._id,
-        role: "member", // default role
+        role: "member",
       });
 
       alert("Foydalanuvchi muvaffaqiyatli qo'shildi");
 
+      // 6️⃣ Inputni tozalash
       if (memberUsernameRef.current) memberUsernameRef.current.value = "";
     } catch (error) {
       console.error("Add member error:", error);
       alert("Xatolik yuz berdi, qayta urinib ko'ring");
     } finally {
+      setIsSubmitting(false); // submit tugadi
     }
   };
 
@@ -170,7 +160,7 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
 
           {/* Dialog content ichida alohida form */}
           <DialogContent className="sm:max-w-[425px]">
-            <form onSubmit={AddMember}>
+            <form onSubmit={handleAddMember}>
               <DialogHeader>
                 <DialogTitle>Guruhga a'zo qo'shish</DialogTitle>
                 <DialogDescription>

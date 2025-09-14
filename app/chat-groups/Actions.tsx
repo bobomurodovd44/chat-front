@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/shad-ui/input";
 import { Label } from "@/components/shad-ui/label";
 import { LogOut, Menu } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 import { useUserStore } from "../store/userStore";
 import client from "@/lib/feathers-client";
 import { useRouter } from "next/navigation";
@@ -35,111 +35,85 @@ const Actions = () => {
   const newChatRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  //   start Add group
-  const AddGroup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [isSubmittingGroup, setIsSubmittingGroup] = useState(false);
+  const [isSubmittingChat, setIsSubmittingChat] = useState(false);
+
+  const handleSubmit = async (type: "group" | "chat") => {
+    const ref = type === "group" ? newGroupRef : newChatRef;
+    if (!ref.current) return;
+
+    const value = ref.current.value.trim();
+    if (!value) return;
+
+    // agar allaqachon submit bo'layotgan bo'lsa return qilamiz
+    if (
+      (type === "group" && isSubmittingGroup) ||
+      (type === "chat" && isSubmittingChat)
+    )
+      return;
+
+    if (type === "group") setIsSubmittingGroup(true);
+    if (type === "chat") setIsSubmittingChat(true);
 
     try {
-      if (newGroupRef.current) {
-        const Addedgroup = await client.service("groups").create({
-          name: newGroupRef.current.value,
-        });
-
-        await client.service("members").create({
-          chatId: Addedgroup._id,
-          userId: user!._id,
-          role: "owner",
-        });
-
-        newGroupRef.current.value = "";
+      if (type === "group") {
+        const newGroup = await client.service("groups").create({ name: value });
+        await client
+          .service("members")
+          .create({ chatId: newGroup._id, userId: user!._id, role: "owner" });
         alert("Guruh yaratildi");
-
-        await loadGroups(setGroups);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Xatolik yuz berdi");
-    } finally {
-    }
-  };
 
-  // start Add Chat
-  const AddChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // 1. Email bo‘yicha userni qidirish
-      if (newChatRef.current) {
-        const userRes = await client.service("users").find({
-          query: { username: newChatRef.current?.value },
-        });
-
-        if (!userRes.data.length) {
-          alert("Bunday foydalanuvchi topilmadi");
-          return;
-        }
+      if (type === "chat") {
+        const userRes = await client
+          .service("users")
+          .find({ query: { username: value } });
+        if (!userRes.data.length)
+          throw new Error("Bunday foydalanuvchi topilmadi");
 
         const chatUser = userRes.data[0];
+        if (chatUser._id === user?._id)
+          throw new Error("Siz o'zingiz bilan chat qura olmaysiz");
 
-        // 2. O‘zi bilan chat yarata olmasligi uchun tekshirish
-        if (user?._id === chatUser._id) {
-          alert("Siz o‘zingiz bilan chat qilolmaysiz");
-          newChatRef.current.value = "";
-          return;
-        }
-
-        // 3. Oldin mavjud private chatni tekshirish
-        const currentUserName = user?.username;
-        const otherUserName = chatUser.username;
-
-        const existingChat = await client.service("groups").find({
+        // Oldin mavjud private chatni tekshirish
+        const existing = await client.service("groups").find({
           query: {
             type: "private",
             $limit: 1,
             $or: [
-              { name: `${currentUserName} & ${otherUserName}` },
-              { name: `${otherUserName} & ${currentUserName}` },
+              { name: `${user?.username} & ${chatUser.username}` },
+              { name: `${chatUser.username} & ${user?.username}` },
             ],
           },
         });
+        if (existing.data.length > 0)
+          throw new Error("Bu foydalanuvchi bilan allaqachon chat mavjud");
 
-        if (existingChat.data.length > 0) {
-          alert("Bu foydalanuvchi bilan allaqachon chat mavjud");
-          newChatRef.current.value = "";
-          return;
-        }
+        const chatName = `${user?.username} & ${chatUser.username}`;
+        const newChat = await client
+          .service("groups")
+          .create({ type: "private", name: chatName });
 
-        // 4. Yangi chat nomini yasash
-        const chatName = `${currentUserName} & ${otherUserName}`;
-
-        // 5. Yangi private chat yaratish
-        const newChat = await client.service("groups").create({
-          type: "private",
-          name: chatName,
-        });
-
-        // 6. Qarshi taraf userni qo‘shish
         await client.service("members").create({
           chatId: newChat._id,
           userId: chatUser._id,
           role: "member",
         });
-
-        // 7. Current userni ham qo‘shish
-        await client.service("members").create({
-          chatId: newChat._id,
-          userId: user!._id,
-          role: "owner",
-        });
+        await client
+          .service("members")
+          .create({ chatId: newChat._id, userId: user!._id, role: "owner" });
 
         alert("Chat qo'shildi");
       }
 
-      // 8. Formani tozalash
-      newChatRef.current!.value = "";
+      ref.current.value = "";
       await loadGroups(setGroups);
-    } catch (error) {
-      console.error("AddChat error:", error);
-      alert("Chat yaratishda xatolik yuz berdi");
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Xatolik yuz berdi");
+    } finally {
+      if (type === "group") setIsSubmittingGroup(false);
+      if (type === "chat") setIsSubmittingChat(false);
     }
   };
 
@@ -151,9 +125,6 @@ const Actions = () => {
       console.error("Logout error:", error);
     }
   };
-
-  // end Add Chat
-
   return (
     <div className="flex items-center justify-between">
       <DropdownMenu>
@@ -181,7 +152,12 @@ const Actions = () => {
 
               {/* Dialog content ichida alohida form */}
               <DialogContent className="sm:max-w-[425px]">
-                <form onSubmit={AddGroup}>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSubmit("group");
+                  }}
+                >
                   <DialogHeader>
                     <DialogTitle>Guruh qo'shish</DialogTitle>
                     <DialogDescription>
@@ -205,7 +181,9 @@ const Actions = () => {
                     <DialogClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">Guruh qo'shish</Button>
+                    <Button type="submit" disabled={isSubmittingGroup}>
+                      {isSubmittingGroup ? "loading ..." : "Chat qo'shish"}
+                    </Button>{" "}
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -228,7 +206,12 @@ const Actions = () => {
 
               {/* Dialog content ichida alohida form */}
               <DialogContent className="sm:max-w-[425px]">
-                <form onSubmit={AddChat}>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSubmit("chat");
+                  }}
+                >
                   <DialogHeader>
                     <DialogTitle>Chat qo'shish</DialogTitle>
                     <DialogDescription>
@@ -252,7 +235,9 @@ const Actions = () => {
                     <DialogClose asChild>
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
-                    <Button type="submit">Chat qo'shish</Button>
+                    <Button type="submit" disabled={isSubmittingChat}>
+                      {isSubmittingChat ? "loading ..." : "Chat qo'shish"}
+                    </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>

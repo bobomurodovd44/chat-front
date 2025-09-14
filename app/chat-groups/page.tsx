@@ -14,6 +14,7 @@ import { useUserStore } from "../store/userStore";
 import { Separator } from "@/components/shad-ui/separator";
 import CustomLoading from "./CustomLoading";
 import { loadGroups } from "./functions";
+import Header from "./Header";
 
 const Page = () => {
   const { setGroups } = useGroupStore();
@@ -115,13 +116,7 @@ const Page = () => {
             "url('https://ichip.ru/images/cache/2020/3/16/q90_390602_554a319b12c89169f198fc491.png')",
         }}
       >
-        <div className="h-[50px] shadow-lg bg-white border-none flex items-center justify-between p-2 ">
-          <div className="h-full flex items-center gap-3">
-            <p className="font-medium text-xl ml-2  text-gray-900">
-              {selectedChatName}
-            </p>
-          </div>
-        </div>
+        <Header />
         {/* Messages */}
         <div className="flex-1 scrollbar-hidden overflow-y-auto w-full lg:max-w-4/6 sm:max-w-full mx-auto p-4">
           <Messages />
