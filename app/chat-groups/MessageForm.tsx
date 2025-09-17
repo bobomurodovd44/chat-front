@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/shad-ui/dialog";
 import { Button } from "@/components/shad-ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { Label } from "@/components/shad-ui/label";
 import { Input } from "@/components/shad-ui/input";
 
@@ -30,18 +30,22 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
   const memberUsernameRef = useRef<HTMLInputElement>(null);
 
   const textRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return; // multiple submitni oldini olish
+    if (isSubmitting) return;
     if (!selectedGroup || !user) return;
 
     const text = textRef.current?.value?.trim();
-    if (!text) return; // bo'sh message yuborilmasin
+    const file = fileRef.current?.files?.[0];
 
-    setIsSubmitting(true); // submit boshlandi
+    // text ham, fayl ham bo‘lmasa qaytamiz
+    if (!text && !file) return;
+
+    setIsSubmitting(true);
     try {
-      // Member tekshirish
+      // 1️⃣ A'zo ekanligini tekshirish
       const response = await client.service("members").find({
         query: { chatId: selectedGroup._id, userId: user._id },
       });
@@ -52,24 +56,53 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
         return;
       }
 
-      // Message yaratish
+      // 2️⃣ Agar fayl bo‘lsa, upload qilish
+      let fileMeta = {};
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("http://localhost:3030/express/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          throw new Error("File upload failed");
+        }
+
+        const uploaded = await res.json();
+        fileMeta = {
+          fileUrl: uploaded.fileUrl,
+          fileName: uploaded.fileName,
+          fileSize: uploaded.fileSize,
+          fileType: uploaded.fileType,
+        };
+
+        // inputni tozalash
+        if (fileRef.current) fileRef.current.value = "";
+      }
+
+      // 3️⃣ Message yaratish
       const newMessage = await client.service("messages").create({
         chatId: selectedGroup._id,
         senderId: member._id,
         text,
+        ...fileMeta,
       });
 
       addMessage(newMessage);
 
-      // Inputni tozalash va scroll qilish
+      // 4️⃣ Inputni tozalash va scroll
       if (textRef.current) textRef.current.value = "";
-      if (messagesEndRef?.current)
+      if (messagesEndRef?.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
     } catch (error) {
       console.error(error);
       alert("Xatolik yuz berdi, qayta urinib ko‘ring");
     } finally {
-      setIsSubmitting(false); // submit tugadi
+      setIsSubmitting(false);
     }
   };
 
@@ -137,13 +170,22 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
   return (
     <div className="w-full lg:max-w-4/6 mx-auto items-center border-t-1 border-gray-200 p-3 flex gap-2">
       <form onSubmit={handleSubmit} className="w-full flex gap-2">
-        <input
-          type="text"
-          ref={textRef}
-          required
-          placeholder="Type a message..."
-          className="w-full border-none rounded-lg  outline-none text-lg font-medium py-2 px-4 bg-white"
-        />
+        <div className="flex w-full">
+          <input
+            type="text"
+            ref={textRef}
+            placeholder="Type a message..."
+            className="w-full border-none rounded-tl-lg rounded-bl-lg  outline-none text-lg font-medium py-2 px-4 bg-white"
+          />
+          <label
+            htmlFor="fileUpload"
+            className="font-medium py-2 px-4 bg-white text-lg rounded-tr-lg rounded-br-lg border-l-2 border-gray-600"
+          >
+            <Upload />
+          </label>
+          <input id="fileUpload" type="file" ref={fileRef} className="hidden" />
+        </div>
+        <Button type="submit">Send</Button>
       </form>
       {selectedGroup?.type != "private" && (
         <Dialog>

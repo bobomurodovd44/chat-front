@@ -10,6 +10,10 @@ export type Message = {
   senderEmail: string;
   senderFullName: string;
   senderUserId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
 };
 
 type MessageStore = {

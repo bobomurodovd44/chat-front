@@ -28,11 +28,13 @@ const Page = () => {
 
   const loadMessages = async () => {
     try {
+      console.log("Load messages uchun ID:", selectedGroup?._id);
+
       const response = await client.service("messages").find({
-        query: {
-          chatId: selectedGroup?._id,
-        },
+        query: { chatId: selectedGroup?._id },
       });
+
+      console.log("Backend javobi:", response);
 
       setMessages(response.data);
     } catch (error) {
@@ -70,6 +72,10 @@ const Page = () => {
     };
 
     getMessages();
+  }, [selectedGroup?._id]);
+
+  useEffect(() => {
+    console.log(selectedGroup);
   }, [selectedGroup]);
 
   useEffect(() => {

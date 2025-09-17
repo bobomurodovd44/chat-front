@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { useSelectedGroupStore } from "../store/selectedGroupStore";
 import { useUserStore } from "../store/userStore";
 import { Avatar, AvatarFallback } from "@/components/shad-ui/avatar";
+import FileDisplay from "./FileDisplay";
 
 const Messages = () => {
   const { messages } = useMessageStore();
@@ -52,15 +53,26 @@ const Messages = () => {
               )}
 
               {/* Message bubble */}
-              <p
-                className={`max-w-[60%] px-3 py-2 rounded-xl text-sm font-medium break-words ${
-                  isOwnMessage
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-800"
-                }`}
-              >
-                {msg.text}
-              </p>
+              <div className="flex max-w-[60%] flex-col gap-1 ">
+                {msg.fileUrl && (
+                  <FileDisplay
+                    fileUrl={msg.fileUrl}
+                    fileType={msg.fileType}
+                    fileName={msg.fileName}
+                  />
+                )}
+                {msg.text && (
+                  <p
+                    className={`max-w-full w-fit px-3 py-2 rounded-xl text-sm font-medium break-words ${
+                      isOwnMessage
+                        ? "bg-blue-600 text-white self-end"
+                        : "bg-gray-200 text-gray-800 self-start"
+                    }`}
+                  >
+                    {msg.text}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Timestamp */}
