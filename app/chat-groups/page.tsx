@@ -107,7 +107,7 @@ const Page = () => {
   return (
     <div className="w-full h-screen flex ">
       {/* Sidebar */}
-      <div className="w-64 border-r-2 shadow-lg p-1 hidden lg:flex lg:flex-col border-gray-300 overflow-y-auto h-screen">
+      <div className="w-64 border-r-2 shadow-lg p-1 lg:w-50 lg:flex-col border-gray-300 overflow-y-auto h-screen">
         {/* Chap sidebar content */}
         <Actions />
         <Separator className="my-1" />
