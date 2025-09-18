@@ -26,22 +26,6 @@ const Page = () => {
   const [selectedChatName, setSelectedChatName] = useState("");
   const router = useRouter();
 
-  const loadMessages = async () => {
-    try {
-      console.log("Load messages uchun ID:", selectedGroup?._id);
-
-      const response = await client.service("messages").find({
-        query: { chatId: selectedGroup?._id },
-      });
-
-      console.log("Backend javobi:", response);
-
-      setMessages(response.data);
-    } catch (error) {
-      console.error("Error loading messages:", error);
-    }
-  };
-
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -63,20 +47,6 @@ const Page = () => {
 
     checkAuth();
   }, []);
-
-  useEffect(() => {
-    const getMessages = async () => {
-      if (selectedGroup) {
-        await loadMessages();
-      }
-    };
-
-    getMessages();
-  }, [selectedGroup?._id]);
-
-  useEffect(() => {
-    console.log(selectedGroup);
-  }, [selectedGroup]);
 
   useEffect(() => {
     if (messagesEndRef.current) {

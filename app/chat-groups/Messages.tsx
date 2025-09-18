@@ -6,11 +6,29 @@ import { useSelectedGroupStore } from "../store/selectedGroupStore";
 import { useUserStore } from "../store/userStore";
 import { Avatar, AvatarFallback } from "@/components/shad-ui/avatar";
 import FileDisplay from "./FileDisplay";
+import client from "@/lib/feathers-client";
+import { usePaginationStore } from "../store/messagePaginateStore";
+import { loadMessages } from "./functions";
 
 const Messages = () => {
-  const { messages } = useMessageStore();
+  const { messages, setMessages } = useMessageStore();
+  const { skip, limit, total, setTotal, setSkip } = usePaginationStore();
   const { selectedGroup, setSelectedGroup } = useSelectedGroupStore();
   const { user } = useUserStore();
+
+  useEffect(() => {
+    if (selectedGroup?._id) {
+      setSkip(0);
+      loadMessages();
+    }
+  }, [selectedGroup?._id]);
+
+  // skip yoki limit o‘zgarsa qayta yuklash
+  useEffect(() => {
+    if (selectedGroup?._id) {
+      loadMessages();
+    }
+  }, [skip, limit, selectedGroup?._id]);
 
   const getInitials = (name: string) => {
     if (!name) return "?";

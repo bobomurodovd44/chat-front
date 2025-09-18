@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelectedGroupStore } from "../store/selectedGroupStore";
 import { useMessageStore } from "../store/messageStore";
 import client from "@/lib/feathers-client";
@@ -18,6 +18,7 @@ import { Button } from "@/components/shad-ui/button";
 import { Plus, Upload } from "lucide-react";
 import { Label } from "@/components/shad-ui/label";
 import { Input } from "@/components/shad-ui/input";
+import { loadMessages } from "./functions";
 
 type MessageFormProps = {
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
@@ -31,6 +32,10 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
 
   const textRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    console.log(selectedGroup);
+  }, [selectedGroup]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,8 +96,7 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
         ...fileMeta,
       });
 
-      addMessage(newMessage);
-
+      await loadMessages();
       // 4️⃣ Inputni tozalash va scroll
       if (textRef.current) textRef.current.value = "";
       if (messagesEndRef?.current) {
