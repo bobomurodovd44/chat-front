@@ -230,7 +230,9 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
                 <DialogClose asChild>
                   <Button variant="outline">Cancel</Button>
                 </DialogClose>
-                <Button type="submit">Guruhga qo'shish</Button>
+                <Button disabled={isSubmitting} type="submit">
+                  {isSubmitting ? "loading ..." : "Guruhga qo'shish"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>

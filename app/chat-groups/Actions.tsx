@@ -107,7 +107,6 @@ const Actions = () => {
       }
 
       ref.current.value = "";
-      await loadGroups(setGroups);
     } catch (err: any) {
       console.error(err);
       alert(err.message || "Xatolik yuz berdi");
@@ -182,7 +181,7 @@ const Actions = () => {
                       <Button variant="outline">Cancel</Button>
                     </DialogClose>
                     <Button type="submit" disabled={isSubmittingGroup}>
-                      {isSubmittingGroup ? "loading ..." : "Chat qo'shish"}
+                      {isSubmittingGroup ? "loading ..." : "Guruh qo'shish"}
                     </Button>{" "}
                   </DialogFooter>
                 </form>

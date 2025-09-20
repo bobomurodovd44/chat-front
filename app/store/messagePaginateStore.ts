@@ -12,7 +12,7 @@ interface PaginationState {
 
 export const usePaginationStore = create<PaginationState>((set) => ({
   total: 0,
-  limit: 6,
+  limit: 15,
   skip: 0,
 
   setTotal: (total) => set({ total }),
