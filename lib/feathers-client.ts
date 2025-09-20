@@ -2,6 +2,7 @@ import { feathers } from "@feathersjs/feathers";
 import socketio from "@feathersjs/socketio-client";
 import authentication from "@feathersjs/authentication-client";
 import io from "socket.io-client";
+import { loadGroups, loadMessages } from "@/app/chat-groups/functions";
 
 // Initialize the socket connection
 const socket = io("http://localhost:3030");
@@ -18,6 +19,18 @@ client.configure(
     storage: typeof window !== "undefined" ? window.localStorage : undefined,
   })
 );
+
+client.service("messages").on("created", async () => {
+  await loadMessages();
+});
+
+client.service("groups").on("created", async () => {
+  await loadGroups();
+});
+
+client.service("groups").on("removed", async () => {
+  await loadGroups();
+});
 
 export default client;
 

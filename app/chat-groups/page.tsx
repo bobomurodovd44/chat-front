@@ -33,7 +33,7 @@ const Page = () => {
         const response = await client.reAuthenticate();
         if (response.user) {
           setUser(response.user);
-          await loadGroups(setGroups);
+          await loadGroups();
         } else {
           router.push("/login");
         }

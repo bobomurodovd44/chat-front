@@ -96,7 +96,6 @@ const MessageForm = ({ messagesEndRef }: MessageFormProps) => {
         ...fileMeta,
       });
 
-      await loadMessages();
       // 4️⃣ Inputni tozalash va scroll
       if (textRef.current) textRef.current.value = "";
       if (messagesEndRef?.current) {

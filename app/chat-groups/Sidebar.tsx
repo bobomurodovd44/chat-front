@@ -50,7 +50,6 @@ const Sidebar = () => {
 
       // Guruhlarni yangilash
       try {
-        await loadGroups(setGroups);
       } catch (err) {
         console.error("Guruhlarni yuklashda xatolik:", err);
       }
