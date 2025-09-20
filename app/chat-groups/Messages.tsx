@@ -16,6 +16,8 @@ const Messages = () => {
   const { selectedGroup, setSelectedGroup } = useSelectedGroupStore();
   const { user } = useUserStore();
 
+  const bottomRef = useRef<HTMLDivElement>(null); // 👈 scroll qilish uchun ref
+
   useEffect(() => {
     if (selectedGroup?._id) {
       setSkip(0);
@@ -39,6 +41,15 @@ const Messages = () => {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  useEffect(() => {
+    // DOM tayyor bo‘lishini kutamiz
+    const timeout = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100); // 50-100ms yetarli
+
+    return () => clearTimeout(timeout);
+  }, [messages]);
 
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString("en-US", {
@@ -104,6 +115,8 @@ const Messages = () => {
           </div>
         );
       })}
+
+      <div ref={bottomRef} />
     </>
   );
 };
