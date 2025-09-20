@@ -24,12 +24,15 @@ const Sidebar = () => {
       return;
     }
 
+    console.log("id:", id, typeof id);
+    console.log("user._id:", user._id, typeof user._id);
+
     try {
-      // Foydalanuvchining role tekshiruvi
+      // Role tekshiruvi
       const response = await client.service("members").find({
         query: {
-          chatId: id,
-          userId: user._id,
+          chatId: id.toString(),
+          userId: user._id.toString(),
         },
       });
 
@@ -46,16 +49,17 @@ const Sidebar = () => {
       }
 
       // Guruhni o'chirish
-      await client.service("groups").remove(id);
+      await client.service("groups").remove(id.toString());
 
       // Guruhlarni yangilash
       try {
+        await loadGroups();
       } catch (err) {
         console.error("Guruhlarni yuklashda xatolik:", err);
       }
 
-      // Agar o'chirilgan guruh tanlangan bo'lsa, selectedGroup-ni tozalash
-      if (selectedGroup?._id === id) {
+      // Tanlangan guruhni tozalash
+      if (selectedGroup?._id.toString() === id.toString()) {
         setSelectedGroup(null);
       }
     } catch (error) {
